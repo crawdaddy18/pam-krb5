@@ -1,3 +1,6 @@
+# pam-krb5 4.8 for RStudio
+
+
 # pam-krb5 4.8
 
 Copyright 2005-2010, 2014-2015, 2017 Russ Allbery <eagle@eyrie.org>.
