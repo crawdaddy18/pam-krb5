@@ -1,5 +1,16 @@
 # pam-krb5 4.8 for RStudio
 
+I forked this because I couldn't get Russ' version of pam-krb5 to work 
+properly with RStudio.  My use case was I needed RStudio to pull a credential
+cache and not destroy it.  The "retain_after_close" was not working for me
+as the functions that made that check were not called for some reason.  It 
+needs more digging, but what this code does is prevent the credential cache from
+being destroyed and it also keeps a "/tmp/krb5cc_${UID}" version which 
+RHDFS needs.  So now, you should be able to do an hdfs.ls('/') after hdfs.init()
+from RStudio without needed to run a "kinit" from the command prompt inside RStudio.
+
+I haven't cleaned out my debug statements, so ignore those.  I'll take care of that later
+after I'm sure there are no other issues.
 
 # pam-krb5 4.8
 
