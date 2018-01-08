@@ -353,6 +353,7 @@ pamk5_password(struct pam_args *args, bool only_auth)
             krb5_free_unparsed_name(ctx->context, principal);
         }
         ctx->expired = false;
+        putil_err_krb5(args, 0, "INSIDE PASSWORD.C %s", "STRING");
         pamret = pamk5_cache_init_random(args, creds);
         krb5_free_cred_contents(ctx->context, creds);
         free(creds);

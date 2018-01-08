@@ -23,6 +23,7 @@
 #include <pam-util/args.h>
 #include <pam-util/logging.h>
 
+#include <syslog.h>
 
 /*
  * Create a new context and populate it with the user from PAM and the current
@@ -73,6 +74,7 @@ pamk5_context_new(struct pam_args *args)
     }
 
 done:
+	putil_err_krb5(args, 0, "CONTEXT.C: INSIDE DONE OF PAMK5_CONTEXT_NEW");
     if (ctx != NULL && retval != PAM_SUCCESS)
         pamk5_context_free(args);
     return retval;
@@ -111,17 +113,46 @@ pamk5_context_fetch(struct pam_args *args)
 static void
 context_free(struct context *ctx, bool free_context)
 {
+	setlogmask (LOG_UPTO (LOG_NOTICE));
+	 openlog ("myLog", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+	 syslog (LOG_NOTICE, "myLog : User %d: CONTEXT.C:  CONTEXT_FREE ENTRY", getuid ());
+    closelog();
+
     if (ctx == NULL)
         return;
     free(ctx->name);
     if (ctx->context != NULL) {
-        if (ctx->princ != NULL)
-            krb5_free_principal(ctx->context, ctx->princ);
+        if (ctx->princ != NULL) {
+        	setlogmask (LOG_UPTO (LOG_NOTICE));
+        		 openlog ("myLog", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+        		 syslog (LOG_NOTICE, "myLog : User %d: CONTEXT.C:  CALLING KRB5_FREE_PRINCIPAL", getuid ());
+        		 syslog (LOG_NOTICE, "myLog : User %d: CONTEXT.C:  dont_destroy_cache set to %d", getuid (), ctx->dont_destroy_cache);
+        	closelog();
+
+        	krb5_free_principal(ctx->context, ctx->princ);
+        }
         if (ctx->cache != NULL) {
-            if (ctx->dont_destroy_cache)
-                krb5_cc_close(ctx->context, ctx->cache);
-            else
+        	/* CC:  The retain_after_close is not being honored by auth in PAM, so I am setting manually here
+        	 * Remove the below line "ctx->dont_destroy_cache=1" to put back to original code
+        	 */
+        	ctx->dont_destroy_cache=1;
+            if (ctx->dont_destroy_cache) {
+
+            	setlogmask (LOG_UPTO (LOG_NOTICE));
+            	  openlog ("myLog", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+            	  syslog (LOG_NOTICE, "myLog : User %d: CONTEXT.C:  CALLING KRB5_CC_CLOSE", getuid ());
+            	closelog();
+
+            	krb5_cc_close(ctx->context, ctx->cache);
+            }
+            else {
+            	setlogmask (LOG_UPTO (LOG_NOTICE));
+            	  openlog ("myLog", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+            	  syslog (LOG_NOTICE, "myLog : User %d: CONTEXT.C:  ABOUT TO CALL KRB5_CC_DESTROY", getuid ());
+            	closelog();
+
                 krb5_cc_destroy(ctx->context, ctx->cache);
+            }
         }
         if (ctx->creds != NULL) {
             krb5_free_cred_contents(ctx->context, ctx->creds);
@@ -130,8 +161,15 @@ context_free(struct context *ctx, bool free_context)
         if (free_context)
             krb5_free_context(ctx->context);
     }
-    if (ctx->fast_cache != NULL)
+    if (ctx->fast_cache != NULL) {
+
+    	setlogmask (LOG_UPTO (LOG_NOTICE));
+    	 openlog ("myLog", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+    	 syslog (LOG_NOTICE, "myLog : User %d: CONTEXT.C:  ABOUT TO CALL KRB5_CC_DESTROY #2", getuid ());
+    	closelog();
+
         krb5_cc_destroy(ctx->context, ctx->fast_cache);
+    }
     free(ctx);
 }
 
@@ -145,6 +183,7 @@ context_free(struct context *ctx, bool free_context)
 void
 pamk5_context_free(struct pam_args *args)
 {
+	putil_err_krb5(args, 0, "CONTEXT.C: INSIDE PAMKT_CONTEXT_FREE");
     if (args->config->ctx == NULL)
         return;
     if (args->user == args->config->ctx->name)

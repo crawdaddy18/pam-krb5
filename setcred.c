@@ -244,6 +244,8 @@ fail:
 int
 pamk5_setcred(struct pam_args *args, bool refresh)
 {
+	putil_err_krb5(args, 0, "SETCRED.C:  PAMK5_SETCRED ENTRY");
+
     struct context *ctx = NULL;
     krb5_ccache cache = NULL;
     char *cache_name = NULL;
@@ -452,14 +454,17 @@ pamk5_setcred(struct pam_args *args, bool refresh)
     }
 
     /* Detroy the temporary cache and put the new cache in the context. */
+    putil_err_krb5(args, 0, "HERE 1 %s", "STRING");
     krb5_cc_destroy(ctx->context, ctx->cache);
     ctx->cache = cache;
     cache = NULL;
     ctx->initialized = 1;
+    args->config->retain_after_close=1;
     if (args->config->retain_after_close)
         ctx->dont_destroy_cache = 1;
 
 done:
+putil_err_krb5(args, 0, "HERE 2 %s", "STRING");
     if (ctx != NULL && cache != NULL)
         krb5_cc_destroy(ctx->context, cache);
     free(cache_name);

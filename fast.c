@@ -131,6 +131,7 @@ cache_init_anonymous(struct pam_args *args, krb5_ccache *ccache)
 
  done:
     if (retval != 0 && *ccache != NULL) {
+        putil_debug(args, "INSIDE FAST.C");
         krb5_cc_destroy(c, *ccache);
         *ccache = NULL;
     }
@@ -216,17 +217,20 @@ fast_setup_anon(struct pam_args *args)
     if (retval != 0) {
         putil_debug_krb5(args, retval, "cannot get name of anonymous FAST"
                          " credential cache");
+                         putil_debug(args, "ALSO INSIDE FAST.C");
         krb5_cc_destroy(c, ccache);
         return NULL;
     }
     result = strdup(cache);
     if (result == NULL) {
         putil_crit(args, "strdup failure: %s", strerror(errno));
+        putil_debug(args, "ALSO INSIDE FAST.C #3");
         krb5_cc_destroy(c, ccache);
     }
     krb5_free_string(c, cache);
     putil_debug(args, "anonymous authentication for FAST succeeded");
     if (args->config->ctx->fast_cache != NULL)
+        putil_debug(args, "ALSO INSIDE FAST.C #4");
         krb5_cc_destroy(c, args->config->ctx->fast_cache);
     args->config->ctx->fast_cache = ccache;
     return result;

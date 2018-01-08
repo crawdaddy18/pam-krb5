@@ -741,6 +741,7 @@ int
 pamk5_password_auth(struct pam_args *args, const char *service,
                     krb5_creds **creds)
 {
+	putil_err_krb5(args, 0, "AUTH.C PAMK5_PASSWORD_AUTH");
     struct context *ctx;
     krb5_get_init_creds_opt *opts = NULL;
     krb5_error_code retval = 0;
@@ -920,6 +921,7 @@ done:
 
     /* Whatever the results, destroy the anonymous FAST cache. */
     if (ctx->fast_cache != NULL) {
+    	putil_err_krb5(args, 0, "ABOUT TO DESTROY CACHE IN AUTH.C %s", "STRING");
         krb5_cc_destroy(ctx->context, ctx->fast_cache);
         ctx->fast_cache = NULL;
     }
@@ -948,6 +950,8 @@ pamk5_authenticate(struct pam_args *args)
     int pamret;
     bool set_context = false;
     krb5_error_code retval;
+
+    putil_err_krb5(args, 0, "AUTH.C: PAMK5_AUTHENTICATE");
 
     /* Temporary backward compatibility. */
     if (args->config->use_authtok && !args->config->force_first_pass) {
@@ -1075,11 +1079,13 @@ pamk5_authenticate(struct pam_args *args)
      * cache.
      */
     if (!args->config->no_ccache && !ctx->expired)
+    	putil_err_krb5(args, 0, "AUTH.C:  PAMK5_AUTHENTICATE  #2");
         pamret = pamk5_cache_init_random(args, creds);
 
 done:
     if (creds != NULL && ctx != NULL) {
-        krb5_free_cred_contents(ctx->context, creds);
+    	putil_err_krb5(args, 0, "AUTH.C:  PAMK5_AUTHENTICATE  #3");
+    	krb5_free_cred_contents(ctx->context, creds);
         free(creds);
     }
 

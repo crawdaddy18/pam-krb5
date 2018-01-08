@@ -79,7 +79,7 @@ PAM_EXTERN int
 pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc,
                     const char **argv)
 {
-    struct pam_args *args;
+	struct pam_args *args;
     int pamret;
 
     args = pamk5_init(pamh, flags, argc, argv);
@@ -88,6 +88,8 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc,
         goto done;
     }
     ENTRY(args, flags);
+
+    putil_err_krb5(args, 0, "PUBLIC.C PAM_SM_AUTHENTICATE");
 
     pamret = pamk5_authenticate(args);
 
@@ -116,6 +118,7 @@ pam_sm_setcred(pam_handle_t *pamh, int flags, int argc, const char **argv)
     }
     ENTRY(args, flags);
 
+    putil_err_pam(args, 0, "INSIDE PAM_SM_SETCRED");
     /*
      * Special case.  Just free the context data, which will destroy the
      * ticket cache as well.

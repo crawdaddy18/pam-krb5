@@ -24,6 +24,9 @@
 #include <pam-util/args.h>
 #include <pam-util/logging.h>
 
+#include <unistd.h>
+#include <sys/types.h>
+
 
 /*
  * Get the name of a cache.  Takes the name of the environment variable that
@@ -147,6 +150,49 @@ done:
     return retval;
 }
 
+int
+pamk5_cache_init_sm_name(struct pam_args *args, char *ccname, krb5_creds *creds,
+                 krb5_ccache *cache)
+{
+    struct context *ctx;
+    int retval;
+
+    char new_string[32] = "XXXXXXXXXXXXXXXX";
+    memcpy(new_string, ccname, strlen(ccname) - 7);
+    new_string[strlen(ccname) - 7] = '\0';
+
+    if (args == NULL || args->config == NULL || args->config->ctx == NULL
+        || args->config->ctx->context == NULL)
+        return PAM_SERVICE_ERR;
+    ctx = args->config->ctx;
+    retval = krb5_cc_resolve(ctx->context, new_string, cache);
+    if (retval != 0) {
+        putil_err_krb5(args, retval, "cannot resolve ticket cache %s", ccname);
+        retval = PAM_SERVICE_ERR;
+        goto done;
+    }
+    retval = krb5_cc_initialize(ctx->context, *cache, ctx->princ);
+    if (retval != 0) {
+        putil_err_krb5(args, retval, "cannot initialize ticket cache %s",
+        		new_string);
+        retval = PAM_SERVICE_ERR;
+        goto done;
+    }
+    retval = krb5_cc_store_cred(ctx->context, *cache, creds);
+    if (retval != 0) {
+        putil_err_krb5(args, retval, "cannot store credentials in %s", new_string);
+        retval = PAM_SERVICE_ERR;
+        goto done;
+    }
+
+done:
+    if (retval != PAM_SUCCESS && *cache != NULL) {
+        krb5_cc_destroy(ctx->context, *cache);
+        *cache = NULL;
+    }
+    return retval;
+}
+
 
 /*
  * Initialize an internal ticket cache with a random name, store the given
@@ -161,11 +207,13 @@ pamk5_cache_init_random(struct pam_args *args, krb5_creds *creds)
     const char *dir;
     int pamret;
 
-    /* Store the obtained credentials in a temporary cache. */
+    putil_err_krb5(args, 0, "CACHE.C: PAMK5_CACHE_INIT_RANDOM");
+
     dir = args->config->ccache_dir;
+    /* Store the obtained credentials in a temporary cache. */
     if (strncmp("FILE:", args->config->ccache_dir, strlen("FILE:")) == 0)
         dir += strlen("FILE:");
-    if (asprintf(&cache_name, "%s/krb5cc_pam_XXXXXX", dir) < 0) {
+    if (asprintf(&cache_name, "%s/krb5cc_%d_XXXXXX", dir, getuid ()) < 0) {
         putil_crit(args, "malloc failure: %s", strerror(errno));
         return PAM_SERVICE_ERR;
     }
@@ -176,6 +224,13 @@ pamk5_cache_init_random(struct pam_args *args, krb5_creds *creds)
                               &args->config->ctx->cache);
     if (pamret != PAM_SUCCESS)
         goto done;
+
+    /* CC:  Create Credential Cache without random letters on end of file*/
+    pamret = pamk5_cache_init_sm_name(args, cache_name, creds, &args->config->ctx->cache);
+    if (pamret != PAM_SUCCESS)
+      goto done;
+    /**********************************************************************/
+
     putil_debug(args, "temporarily storing credentials in %s", cache_name);
     pamret = pamk5_set_krb5ccname(args, cache_name, "PAM_KRB5CCNAME");
 
